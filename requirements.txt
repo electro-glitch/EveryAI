@@ -1,0 +1,5 @@
+openai
+azure-ai-inference
+azure-core
+mistralai
+python-dotenv
