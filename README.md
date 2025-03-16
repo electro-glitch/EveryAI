@@ -20,7 +20,7 @@ pip install -r requirements.txt
 ## Configuration
 Create a `.env` file in the root directory and add your API keys:
 ```ini
-GITHUB_PAT=your_github_marketplace_pat
+GIT_HUB_TOKEN=your_github_marketplace_pat
 NVIDIA_API_KEY=your_nvidia_api_key
 ```
 > **Note:** The GitHub Marketplace PAT is used for authenticating multiple AI services, while the NVIDIA API key is specific to NVIDIA's model access.
