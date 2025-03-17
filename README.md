@@ -28,7 +28,7 @@ NVIDIA_API_KEY=your_nvidia_api_key
 ## Usage
 Run EveryAI and interact with multiple AI models at once:
 ```bash
-python main.py
+python everyai.py
 ```
 Simply enter your prompt and choose whether to query a specific model or get responses from all supported AI models simultaneously.
 
