@@ -2,15 +2,13 @@ import os
 from flask import Flask, render_template, request, jsonify, session
 from dotenv import load_dotenv
 import threading
+import time
 import uuid
 from flask.ctx import copy_current_request_context
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # For session management
-
-# Load environment variables only in development
-if os.getenv("RENDER") is None:
-    load_dotenv()
+load_dotenv()
 
 # Dictionary mapping model IDs to functions (moved to a function to use API keys from session)
 def get_model_function(model_id, api_keys):
@@ -19,8 +17,8 @@ def get_model_function(model_id, api_keys):
         create_deepseekv3, create_metallama, create_mistral, create_nvidia_nemotron
     )
     
-    github_token = api_keys.get('github_token', os.getenv('GIT_HUB_TOKEN', ''))
-    nvidia_key = api_keys.get('nvidia_key', os.getenv('NVIDIA_KEY', ''))
+    github_token = api_keys.get('github_token', '')
+    nvidia_key = api_keys.get('nvidia_key', '')
     
     MODEL_FUNCTIONS = {
         'gpt4o': create_chatgpt4o(github_token),
@@ -102,19 +100,11 @@ def generate():
 
 def run_all_models(prompt, api_keys):
     results = {}
-
+    
     # Safe processing of models in threads
     def process_model_safe(model_id):
         try:
             model_function = get_model_function(model_id, api_keys)
-            if not model_function:
-                results[model_id] = {
-                    'name': MODEL_NAMES.get(model_id),
-                    'response': 'Model function not found',
-                    'status': 'error'
-                }
-                return
-
             response = model_function(prompt)
             results[model_id] = {
                 'name': MODEL_NAMES.get(model_id),
@@ -127,7 +117,7 @@ def run_all_models(prompt, api_keys):
                 'response': f"Error: {str(e)}",
                 'status': 'error'
             }
-
+    
     # Create and start threads with thread-safe function
     threads = []
     for model_id in MODEL_NAMES.keys():
@@ -136,15 +126,14 @@ def run_all_models(prompt, api_keys):
         thread = threading.Thread(target=thread_func, args=(model_id,))
         thread.start()
         threads.append(thread)
-
+    
     # Wait for all threads to complete
     for thread in threads:
         thread.join()
-
+    
     return jsonify({
         'results': results
     })
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True)
