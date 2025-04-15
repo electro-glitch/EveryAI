@@ -12,7 +12,7 @@ load_dotenv()
 
 # Dictionary mapping model IDs to functions (moved to a function to use API keys from session)
 def get_model_function(model_id, api_keys):
-    from garbage.ai_models import (
+    from ai_models import (
         create_openAIo3mini, create_openAIo1preview, create_chatgpt4o, create_phi4, 
         create_deepseekv3, create_metallama, create_mistral, create_nvidia_nemotron
     )
