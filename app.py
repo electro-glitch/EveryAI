@@ -69,39 +69,33 @@ def get_api_keys():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    data = request.json
-    prompt = data.get('prompt')
-    selected_model = data.get('model')
-    conversation_id = data.get('conversation_id', 'default')
-    
-    if not prompt:
-        return jsonify({'error': 'Prompt is required'}), 400
-    
-    # Save session data without adding to conversation history
-    api_keys = session.get('api_keys', {'github_token': '', 'nvidia_key': ''})
-    
-    if selected_model == 'all':
-        return run_all_models(prompt, api_keys)
-    
     try:
+        data = request.json
+        prompt = data.get('prompt')
+        selected_model = data.get('model')
+        if not prompt:
+            return jsonify({'error': 'Prompt is required'}), 400
+
+        api_keys = session.get('api_keys', {'github_token': '', 'nvidia_key': ''})
+        if not api_keys.get('github_token') and not api_keys.get('nvidia_key'):
+            return jsonify({'error': 'API keys are missing. Please provide them in settings.'}), 400
+
+        if selected_model == 'all':
+            return run_all_models(prompt, api_keys)
+
         model_function = get_model_function(selected_model, api_keys)
-        
         if not model_function:
             return jsonify({'error': 'Invalid model selected'}), 400
-        
+
         response = model_function(prompt)
-        
-        return jsonify({
-            'model': MODEL_NAMES.get(selected_model),
-            'response': response
-        })
+        return jsonify({'model': MODEL_NAMES.get(selected_model), 'response': response})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f"Error in /generate: {str(e)}")
+        return jsonify({'error': f"Internal Server Error: {str(e)}"}), 500
 
 def run_all_models(prompt, api_keys):
     results = {}
-    
-    # Safe processing of models in threads
+
     def process_model_safe(model_id):
         try:
             model_function = get_model_function(model_id, api_keys)
@@ -117,24 +111,17 @@ def run_all_models(prompt, api_keys):
                 'response': f"Error: {str(e)}",
                 'status': 'error'
             }
-    
-    # Create and start threads with thread-safe function
+
     threads = []
     for model_id in MODEL_NAMES.keys():
-        # Use copy_current_request_context to make the request context available in the thread
-        thread_func = copy_current_request_context(process_model_safe)
-        thread = threading.Thread(target=thread_func, args=(model_id,))
+        thread = threading.Thread(target=process_model_safe, args=(model_id,))
         thread.start()
         threads.append(thread)
-    
-    # Wait for all threads to complete
+
     for thread in threads:
         thread.join()
-    
-    return jsonify({
-        'results': results
-    })
+
+    return jsonify({'results': results})
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
