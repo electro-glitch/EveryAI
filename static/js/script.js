@@ -91,10 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Scroll to bottom
         scrollToBottom();
 
-        // Add timeout for fetch requests
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-
         try {
             const selectedModel = modelSelect.value;
             const response = await fetch('/generate', {
@@ -106,11 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     prompt: prompt,
                     model: selectedModel,
                     conversation_id: currentConversationId
-                }),
-                signal: controller.signal
+                })
             });
-
-            clearTimeout(timeoutId);
 
             const data = await response.json();
 
@@ -133,11 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Failed to generate response');
             }
         } catch (error) {
-            if (error.name === 'AbortError') {
-                addMessageToChat('assistant', 'Request timed out. This could be due to high server load when running all models simultaneously.', 'System');
-            } else {
-                addMessageToChat('assistant', `Error: ${error.message}`, 'System');
-            }
+            addMessageToChat('assistant', `Error: ${error.message}`, 'System');
         } finally {
             // Re-enable submit button and hide loading
             submitBtn.disabled = false;
