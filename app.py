@@ -102,11 +102,19 @@ def generate():
 
 def run_all_models(prompt, api_keys):
     results = {}
-    
+
     # Safe processing of models in threads
     def process_model_safe(model_id):
         try:
             model_function = get_model_function(model_id, api_keys)
+            if not model_function:
+                results[model_id] = {
+                    'name': MODEL_NAMES.get(model_id),
+                    'response': 'Model function not found',
+                    'status': 'error'
+                }
+                return
+
             response = model_function(prompt)
             results[model_id] = {
                 'name': MODEL_NAMES.get(model_id),
@@ -119,7 +127,7 @@ def run_all_models(prompt, api_keys):
                 'response': f"Error: {str(e)}",
                 'status': 'error'
             }
-    
+
     # Create and start threads with thread-safe function
     threads = []
     for model_id in MODEL_NAMES.keys():
@@ -128,11 +136,11 @@ def run_all_models(prompt, api_keys):
         thread = threading.Thread(target=thread_func, args=(model_id,))
         thread.start()
         threads.append(thread)
-    
+
     # Wait for all threads to complete
     for thread in threads:
         thread.join()
-    
+
     return jsonify({
         'results': results
     })
