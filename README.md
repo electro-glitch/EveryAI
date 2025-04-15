@@ -1,3 +1,11 @@
+# Update (15-04-2025)
+
+Website link: https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/ 
+
+_(since I am on the free tier of Azure, all the models can't be run at once yet. If you want to see that happen then reach out!)_
+
+---
+
 # EveryAI
 
 EveryAI is a powerful AI response aggregator that queries multiple AI models simultaneously, providing rapid, diverse responses in a single execution. By leveraging parallel processing, it significantly reduces wait times, making it ideal for research, content generation, and AI benchmarking. 
