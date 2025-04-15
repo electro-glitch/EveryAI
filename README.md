@@ -54,8 +54,11 @@ python everyai.py
 
 ---
 
-**Warning🛑**
+🛑 **Warning:**
+
 The API keys have limits. So use responsibly😅 (... or create multiple keys for longer use 😈)
+
+---
 
 # EveryAI
 
