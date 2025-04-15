@@ -1,3 +1,36 @@
+# Update _(15/04/2025)_
+---
+Great news! **EveryAI** is now fully ready to be deployed locally with a sleek frontend! 🎉 You can now interact with all your favorite AI models right from your browser—no more command-line hassle!
+
+### How to Run It Locally
+
+1. **Clone the Repo**:
+   Grab the latest version of the project:
+   ```bash
+   git clone https://github.com/itstanayhere/EveryAI.git
+   cd everyai
+   ```
+
+2. **Install the Dependencies**:
+   Install all the required packages with a single command:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run It**:
+   Launch the magic by running:
+   ```bash
+   python app.py
+   ```
+   Your shiny new frontend will be up and running at `http://127.0.0.1:5000`. ✨
+
+4. **Enjoy the Interface**:
+   Open your browser, go to `http://127.0.0.1:5000`, and get ready to send prompts and receive lightning-fast responses from multiple AI models. You can choose which model you want to query or hit them all at once for the ultimate AI showdown! 🤖⚡
+
+   How to use:
+  i) 
+
+
 # EveryAI
 
 EveryAI is a powerful AI response aggregator that queries multiple AI models simultaneously, providing rapid, diverse responses in a single execution. By leveraging parallel processing, it significantly reduces wait times, making it ideal for research, content generation, and AI benchmarking. 
