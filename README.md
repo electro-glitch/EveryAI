@@ -54,6 +54,9 @@ python everyai.py
 
 ---
 
+**Warning🛑**
+The API keys have limits. So use responsibly😅 (... or create multiple keys for longer use 😈)
+
 # EveryAI
 
 EveryAI is a powerful AI response aggregator that queries multiple AI models simultaneously, providing rapid, diverse responses in a single execution. By leveraging parallel processing, it significantly reduces wait times, making it ideal for research, content generation, and AI benchmarking. 
