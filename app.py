@@ -101,35 +101,29 @@ def generate():
 def run_all_models(prompt, api_keys):
     results = {}
     
-    # Safe processing of models in threads
-    def process_model_safe(model_id):
+    # Process models sequentially to avoid threading issues
+    for model_id in MODEL_NAMES.keys():
         try:
             model_function = get_model_function(model_id, api_keys)
-            response = model_function(prompt)
-            results[model_id] = {
-                'name': MODEL_NAMES.get(model_id),
-                'response': response,
-                'status': 'success'
-            }
+            if model_function:
+                response = model_function(prompt)
+                results[model_id] = {
+                    'name': MODEL_NAMES.get(model_id),
+                    'response': response,
+                    'status': 'success'
+                }
+            else:
+                results[model_id] = {
+                    'name': MODEL_NAMES.get(model_id),
+                    'response': "Model function not available",
+                    'status': 'error'
+                }
         except Exception as e:
             results[model_id] = {
                 'name': MODEL_NAMES.get(model_id),
                 'response': f"Error: {str(e)}",
                 'status': 'error'
             }
-    
-    # Create and start threads with thread-safe function
-    threads = []
-    for model_id in MODEL_NAMES.keys():
-        # Use copy_current_request_context to make the request context available in the thread
-        thread_func = copy_current_request_context(process_model_safe)
-        thread = threading.Thread(target=thread_func, args=(model_id,))
-        thread.start()
-        threads.append(thread)
-    
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
     
     return jsonify({
         'results': results
