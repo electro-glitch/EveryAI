@@ -1,8 +1,23 @@
-# Update (15-04-2025)
+# 🔄 Update (15-04-2025)
 
-Website link: https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/ 
+🌐 **Website link:** [EveryAI](https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/)  
 
-_(Since I am on the free tier of Azure, all the models can't be run at once yet and the response time is very slow. If you want to see improvements then reach out! In the meantime you can still run the `everyai.py` code in the teminal for lightning fast responses from all AI models)_
+⚠️ _Since I'm on the **free tier** of Azure, all the models can't be run simultaneously yet, and the **response time** is a bit slow._  
+✨ **Want faster, smoother results? Reach out and show some love!**  
+
+🚀 **Pro Tip:** Run `everyai.py` in your terminal for **lightning fast** ⚡️ responses from all AI models!
+
+---
+
+### 🛠️ How to Use the Website:
+
+1. 🔐 Go to **Settings** and enter your **API keys**  
+   _(Don't worry, they're only stored for the duration of your session!)_
+
+2. 🤖 Select a **model** from the **sidebar**
+
+3. 💬 **Chat away!**  
+   _PS: The models don’t remember past messages — each prompt gets you a **fresh**, independent response!_
 
 ---
 
