@@ -2,7 +2,7 @@
 
 Website link: https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/ 
 
-_(since I am on the free tier of Azure, all the models can't be run at once yet. If you want to see that happen then reach out!)_
+_(since I am on the free tier of Azure, all the models can't be run at once yet and the response time is very slow. If you want to see improvements then reach out!)_
 
 ---
 
