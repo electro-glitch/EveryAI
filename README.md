@@ -2,7 +2,7 @@
 
 🌐 **Website link:** [EveryAI](https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/)  
 
-⚠️ _Since I'm on the **free tier** of Azure, all the models can't be run simultaneously yet, and the **response time** is a bit slow._  
+⚠️ _Since I'm on the **free tier** of Azure, all the models can't be run simultaneously yet at all times, and the **response time** is a bit slow._  
 ✨ **Want faster, smoother results? Reach out and show some love!**  
 
 🚀 **Pro Tip:** Run `everyai.py` in your terminal for **lightning fast** ⚡️ responses from all AI models!
