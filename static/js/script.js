@@ -207,7 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(successMsg);
                 setTimeout(() => {
                     document.body.removeChild(successMsg);
-                }, 3000);
+                }, 8000);
             } else {
                 alert('Failed to save API keys.');
             }
