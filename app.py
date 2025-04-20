@@ -1,10 +1,13 @@
 import os
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, Response, stream_with_context
 from dotenv import load_dotenv
 import threading
 import time
 import uuid
+import json
 from flask.ctx import copy_current_request_context
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import queue
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # For session management
@@ -34,16 +37,16 @@ def get_model_function(model_id, api_keys):
     return MODEL_FUNCTIONS.get(model_id)
 
 MODEL_NAMES = {
-    'gpt4o': 'GPT-4o (OpenAI)',
-    'o3mini': 'O3-Mini (Azure)',
-    'o1preview': 'O1-Preview (Azure)',
-    'phi4': 'Phi-4 (Azure)',
-    'deepseekv3': 'DeepSeek-V3 (Azure)',
-    'metallama': 'Meta Llama-3.2-90B (Azure)',
-    'mistral': 'Mistral-Large (Azure)',
-    'nemotron': 'Nvidia Nemotron-70B (Nvidia API)'
+    'gpt4o': 'GPT-4o',
+    'o3mini': 'O3-Mini',
+    'o1preview': 'O1-Preview',
+    'phi4': 'Phi-4',
+    'deepseekv3': 'DeepSeek-V3',
+    'metallama': 'Meta Llama-3.2-90B',
+    'mistral': 'Mistral-Large',
+    'nemotron': 'Nvidia Nemotron-70B'
 }
-
+    
 @app.route('/')
 def index():
     # Generate a session ID if not present
@@ -67,12 +70,18 @@ def save_api_keys():
 def get_api_keys():
     return jsonify(session.get('api_keys', {'github_token': '', 'nvidia_key': ''}))
 
-@app.route('/generate', methods=['POST'])
+@app.route('/generate', methods=['POST', 'GET'])
 def generate():
-    data = request.json
-    prompt = data.get('prompt')
-    selected_model = data.get('model')
-    conversation_id = data.get('conversation_id', 'default')
+    # Handle both GET and POST requests
+    if request.method == 'GET':
+        prompt = request.args.get('prompt')
+        selected_model = request.args.get('model')
+        conversation_id = request.args.get('conversation_id', 'default')
+    else:
+        data = request.json
+        prompt = data.get('prompt')
+        selected_model = data.get('model')
+        conversation_id = data.get('conversation_id', 'default')
     
     if not prompt:
         return jsonify({'error': 'Prompt is required'}), 400
@@ -81,7 +90,7 @@ def generate():
     api_keys = session.get('api_keys', {'github_token': '', 'nvidia_key': ''})
     
     if selected_model == 'all':
-        return run_all_models(prompt, api_keys)
+        return stream_all_models(prompt, api_keys)
     
     try:
         model_function = get_model_function(selected_model, api_keys)
@@ -98,42 +107,81 @@ def generate():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-def run_all_models(prompt, api_keys):
-    results = {}
+def stream_all_models(prompt, api_keys):
+    def generate():
+        # Create a queue to collect events from all models
+        event_queue = queue.Queue()
+        executor = ThreadPoolExecutor(max_workers=len(MODEL_NAMES))
+        
+        def process_model(model_id):
+            try:
+                model_function = get_model_function(model_id, api_keys)
+                
+                # Send model starting event
+                event_data = {
+                    'event': 'model_started',
+                    'model_id': model_id,
+                    'model_name': MODEL_NAMES.get(model_id)
+                }
+                event_queue.put(f"data: {json.dumps(event_data)}\n\n")
+                
+                # Get response from model (this is the part that takes time)
+                response = model_function(prompt)
+                
+                # Send model completed event
+                event_data = {
+                    'event': 'model_completed',
+                    'model_id': model_id,
+                    'model_name': MODEL_NAMES.get(model_id),
+                    'response': response,
+                    'status': 'success'
+                }
+                event_queue.put(f"data: {json.dumps(event_data)}\n\n")
+                
+            except Exception as e:
+                # Send error event
+                event_data = {
+                    'event': 'model_error',
+                    'model_id': model_id,
+                    'model_name': MODEL_NAMES.get(model_id),
+                    'error': str(e)
+                }
+                event_queue.put(f"data: {json.dumps(event_data)}\n\n")
+        
+        # Start all models in parallel
+        futures = []
+        for model_id in MODEL_NAMES:
+            thread_func = copy_current_request_context(process_model)
+            futures.append(executor.submit(thread_func, model_id))
+        
+        # Start a monitoring thread to check for completion
+        all_done = threading.Event()
+        
+        def monitor_futures():
+            for future in futures:
+                future.result()  # Wait for all to complete without blocking the generator
+            all_done.set()
+            # Send completion event
+            event_queue.put(f"data: {json.dumps({'event': 'all_completed'})}\n\n")
+        
+        monitor_thread = threading.Thread(target=monitor_futures)
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        # Yield events as they become available
+        while not (all_done.is_set() and event_queue.empty()):
+            try:
+                # Get events with a timeout to check if we're done
+                event = event_queue.get(timeout=0.1)
+                yield event
+            except queue.Empty:
+                # No events right now, continue checking
+                pass
     
-    # Safe processing of models in threads
-    def process_model_safe(model_id):
-        try:
-            model_function = get_model_function(model_id, api_keys)
-            response = model_function(prompt)
-            results[model_id] = {
-                'name': MODEL_NAMES.get(model_id),
-                'response': response,
-                'status': 'success'
-            }
-        except Exception as e:
-            results[model_id] = {
-                'name': MODEL_NAMES.get(model_id),
-                'response': f"Error: {str(e)}",
-                'status': 'error'
-            }
-    
-    # Create and start threads with thread-safe function
-    threads = []
-    for model_id in MODEL_NAMES.keys():
-        # Use copy_current_request_context to make the request context available in the thread
-        thread_func = copy_current_request_context(process_model_safe)
-        thread = threading.Thread(target=thread_func, args=(model_id,))
-        thread.start()
-        threads.append(thread)
-    
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
-    
-    return jsonify({
-        'results': results
-    })
+    return Response(stream_with_context(generate()), 
+                   mimetype='text/event-stream',
+                   headers={'Cache-Control': 'no-cache',
+                           'X-Accel-Buffering': 'no'})
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -9,50 +9,66 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="chat-container">
+    <div class="app-container">
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <h1>EveryAI</h1>
+                <div class="app-logo">
+                    <span class="logo-text">EveryAI</span>
+                </div>
             </div>
+            
             <div class="model-selector">
-                <label for="model">Choose Model:</label>
-                <select id="model" name="model">
-                    <option value="all">Run ALL Models</option>
-                    {% for model_id, model_name in models.items() %}
-                    <option value="{{ model_id }}">{{ model_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="settings-button" id="settings-btn">
-                <i class="fas fa-cog"></i> Settings
+                <label for="model">SELECT MODEL</label>
+                <div class="select-wrapper">
+                    <select id="model" name="model">
+                        <option value="all">Run All Models</option>
+                        {% for model_id, model_name in models.items() %}
+                        <option value="{{ model_id }}">{{ model_name }}</option>
+                        {% endfor %}
+                    </select>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
             </div>
             
-            <!-- Removed conversation list -->
-            
-            <div class="clear-chat-button" id="new-chat-btn">
-                <i class="fas fa-trash"></i> Clear Chat
+            <div class="sidebar-actions">
+                <button class="action-button" id="settings-btn">
+                    <i class="fas fa-cog"></i>
+                    <span>API Settings</span>
+                </button>
+                
+                <button class="action-button clear-button" id="new-chat-btn">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Clear Chat</span>
+                </button>
             </div>
         </div>
 
-        <!-- Main Chat Area -->
-        <div class="chat-area">
-            <div class="chat-messages" id="chat-messages">
-                <div class="welcome-message">
-                    <h2>Welcome to EveryAI!</h2>
-                    <p>Compare responses from different AI models in a chat interface.</p>
-                    <p>Choose a model from the sidebar and start chatting!</p>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="welcome-container">
+                        <h1>Welcome to EveryAI!</h1>
+                        <p>Compare responses from different AI models in real-time.</p>
+                        <p class="subtitle">Choose a model from the sidebar and start chatting!</p>
+                    </div>
+                    <!-- Messages will appear here -->
                 </div>
-                <!-- Messages will appear here -->
-            </div>
-            
-            <div class="chat-input-container">
-                <textarea id="prompt" name="prompt" placeholder="Type your message here..." rows="1"></textarea>
-                <button id="submit-btn" type="button">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+                
+                <div class="input-container">
+                    <div class="textarea-container">
+                        <textarea id="prompt" name="prompt" placeholder="Type a message..." rows="1"></textarea>
+                    </div>
+                    <button id="submit-btn" type="button" aria-label="Send message">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -62,7 +78,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>API Settings</h2>
-                <span class="close">&times;</span>
+                <button class="close" aria-label="Close">&times;</button>
             </div>
             <div class="modal-body">
                 <p>Enter your API keys to use the models</p>
@@ -78,16 +94,16 @@
                 </div>
                 
                 <div class="button-group">
-                    <button id="save-api-keys">Save Keys</button>
+                    <button id="save-api-keys" class="primary-button">Save Settings</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Non-intrusive loading indicator -->
+    <!-- Loading Indicator -->
     <div id="loading-indicator" class="loading-indicator hidden">
         <div class="spinner"></div>
-        <p>Generating response...</p>
+        <span>Generating responses...</span>
     </div>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
