@@ -92,6 +92,15 @@ document.addEventListener('DOMContentLoaded', () => {
     promptInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
+            
+            // Add the animation class here too for keyboard submissions
+            submitBtn.classList.add('sending');
+            
+            // Remove it after the animation duration
+            setTimeout(() => {
+                submitBtn.classList.remove('sending');
+            }, 700);
+            
             handleSubmit();
             
             // Reset textarea height after send with animation
@@ -266,10 +275,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const prompt = promptInput.value.trim();
         if (!prompt) return;
 
-        // Disable submit button and show loading
+        // Disable submit button while processing
         submitBtn.disabled = true;
-        loadingIndicator.classList.remove('hidden');
-
+        
+        // Add animation class to the button
+        submitBtn.classList.add('sending');
+        
         // Add user message to chat
         addMessageToChat('user', prompt);
 
@@ -279,6 +290,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Scroll to bottom
         scrollToBottom();
+        
+        // Remove animation class after a delay
+        setTimeout(() => {
+            submitBtn.classList.remove('sending');
+        }, 700); // Match animation duration
 
         try {
             const selectedModel = modelSelect.value;
@@ -307,7 +323,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Track this model
                         activeModelResponses[modelId] = { 
                             elementId: `response-${modelId}-${Date.now()}`,
-                            name: modelName
+                            name: modelName,
+                            hasTimedOut: false // Add flag to track timeout state
                         };
                         
                         // Create placeholder with typing indicator
@@ -320,8 +337,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const response = data.response;
                         
                         if (activeModelResponses[modelId]) {
-                            updateModelResponse(modelId, response, true);
+                            // Even if timed out before, replace with the actual response
+                            // and remove error styling
+                            updateModelResponse(modelId, response, true, false);
                             scrollToBottom();
+                            
+                            // Clear the timeout flag since we now have a proper response
+                            activeModelResponses[modelId].hasTimedOut = false;
                         }
                     }
                     else if (data.event === 'model_error') {
@@ -331,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         if (activeModelResponses[modelId]) {
                             updateModelResponse(modelId, `**Error:** ${error}`, false, true);
+                            activeModelResponses[modelId].hasTimedOut = true;
                             scrollToBottom();
                         }
                     }
@@ -386,12 +409,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error:', error);
             addMessageToChat('assistant', `**Error:** ${error.message}`, 'System');
-            loadingIndicator.classList.add('hidden');
             submitBtn.disabled = false;
         }
     }
 
-    // Update the createResponsePlaceholder function to include a timeout mechanism
+    // Update the timeout in the createResponsePlaceholder function
     function createResponsePlaceholder(modelId, modelName) {
         const elementId = activeModelResponses[modelId].elementId;
         
@@ -421,8 +443,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         chatMessages.appendChild(container);
         
-        // Add a timeout for this specific model
-        const timeoutSeconds = 30; // Match the backend timeout
+        // Update the timeout to match backend (60 seconds)
+        const timeoutSeconds = 60; // Match the backend MODEL_TIMEOUT_SECONDS
         activeModelResponses[modelId].timeout = setTimeout(() => {
             // Check if this model response is still showing the typing indicator
             const responseElement = document.getElementById(elementId);
@@ -461,6 +483,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 typingIndicator.remove();
             }
             
+            // Check if this is a successful completion after a timeout error
+            const isRecovery = completed && container.classList.contains('error');
+            
+            // If this is a successful response after an error, remove error styling
+            if (isRecovery) {
+                container.classList.remove('error');
+                message.classList.remove('error-message');
+            }
+            
             // Add content with markdown
             messageContent.innerHTML = marked.parse(content);
             
@@ -469,10 +500,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 hljs.highlightElement(block);
             });
             
-            // Add styling for errors
-            if (isError) {
+            // Only apply error styling if this is a new error, not a recovery
+            if (isError && !completed) {
                 container.classList.add('error');
                 message.classList.add('error-message');
+                activeModelResponses[modelId].hasTimedOut = true;
             }
             
             // Add completion class

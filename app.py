@@ -14,7 +14,7 @@ app.secret_key = os.urandom(24)  # For session management
 load_dotenv()
 
 # Add a timeout constant you can adjust as needed
-MODEL_TIMEOUT_SECONDS = 30  # Timeout after 30 seconds
+MODEL_TIMEOUT_SECONDS = 60  # Timeout after 60 seconds
 
 # Dictionary mapping model IDs to functions (moved to a function to use API keys from session)
 def get_model_function(model_id, api_keys):
