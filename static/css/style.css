@@ -106,6 +106,15 @@ body {
     z-index: 1;
 }
 
+/* Add styling for the logo image */
+.logo-image {
+    width: 28px;
+    height: 28px;
+    margin-right: 10px;
+    display: block;
+}
+
+/* Update the app logo container to align items */
 .app-logo {
     display: flex;
     align-items: center;
