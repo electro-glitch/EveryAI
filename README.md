@@ -14,7 +14,7 @@
 ⚠️ _Since I'm on the **free tier** of Azure, I can't always guarantee you'll be able to run all the models at once, and the **response time** can be a bit slow._  
 ✨ **Want faster, smoother results? Reach out and show some love!**  
 
-🚀 **Pro Tip:** Run `everyai.py` in your terminal for **lightning fast** ⚡️ responses from all AI models!
+🚀 **Pro Tip:** Run `rawcode.py` in your terminal for **lightning fast** ⚡️ responses from all AI models!
 
 ---
 
