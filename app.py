@@ -6,12 +6,15 @@ import time
 import uuid
 import json
 from flask.ctx import copy_current_request_context
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 import queue
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # For session management
 load_dotenv()
+
+# Add a timeout constant you can adjust as needed
+MODEL_TIMEOUT_SECONDS = 30  # Timeout after 30 seconds
 
 # Dictionary mapping model IDs to functions (moved to a function to use API keys from session)
 def get_model_function(model_id, api_keys):
@@ -109,7 +112,6 @@ def generate():
 
 def stream_all_models(prompt, api_keys):
     def generate():
-        # Create a queue to collect events from all models
         event_queue = queue.Queue()
         executor = ThreadPoolExecutor(max_workers=len(MODEL_NAMES))
         
@@ -125,26 +127,42 @@ def stream_all_models(prompt, api_keys):
                 }
                 event_queue.put(f"data: {json.dumps(event_data)}\n\n")
                 
-                # Get response from model (this is the part that takes time)
-                response = model_function(prompt)
-                
-                # Send model completed event
-                event_data = {
-                    'event': 'model_completed',
-                    'model_id': model_id,
-                    'model_name': MODEL_NAMES.get(model_id),
-                    'response': response,
-                    'status': 'success'
-                }
-                event_queue.put(f"data: {json.dumps(event_data)}\n\n")
-                
+                # Create a Future for the model response with a timeout
+                future = executor.submit(model_function, prompt)
+                try:
+                    # Wait for the model to respond with a timeout
+                    response = future.result(timeout=MODEL_TIMEOUT_SECONDS)
+                    
+                    # Send model completed event
+                    event_data = {
+                        'event': 'model_completed',
+                        'model_id': model_id,
+                        'model_name': MODEL_NAMES.get(model_id),
+                        'response': response,
+                        'status': 'success'
+                    }
+                    event_queue.put(f"data: {json.dumps(event_data)}\n\n")
+                except TimeoutError:
+                    # Cancel the future if possible
+                    future.cancel()
+                    # Send timeout event
+                    event_data = {
+                        'event': 'model_error',
+                        'model_id': model_id,
+                        'model_name': MODEL_NAMES.get(model_id),
+                        'error': f"Model response timed out after {MODEL_TIMEOUT_SECONDS} seconds",
+                        'status': 'timeout'
+                    }
+                    event_queue.put(f"data: {json.dumps(event_data)}\n\n")
+                    
             except Exception as e:
                 # Send error event
                 event_data = {
                     'event': 'model_error',
                     'model_id': model_id,
                     'model_name': MODEL_NAMES.get(model_id),
-                    'error': str(e)
+                    'error': str(e),
+                    'status': 'error'
                 }
                 event_queue.put(f"data: {json.dumps(event_data)}\n\n")
         
@@ -158,15 +176,32 @@ def stream_all_models(prompt, api_keys):
         all_done = threading.Event()
         
         def monitor_futures():
-            for future in futures:
-                future.result()  # Wait for all to complete without blocking the generator
-            all_done.set()
-            # Send completion event
-            event_queue.put(f"data: {json.dumps({'event': 'all_completed'})}\n\n")
+            try:
+                for future in futures:
+                    # Wait for all threads with a reasonable timeout
+                    future.result(timeout=MODEL_TIMEOUT_SECONDS + 5)  # Give a little extra time for cleanup
+            except TimeoutError:
+                # Just log this, individual model timeouts are handled in process_model
+                pass
+            except Exception as e:
+                print(f"Error in monitor_futures: {str(e)}")
+            finally:
+                # Always set all_done to ensure we exit properly
+                all_done.set()
+                # Send completion event
+                event_queue.put(f"data: {json.dumps({'event': 'all_completed'})}\n\n")
         
         monitor_thread = threading.Thread(target=monitor_futures)
         monitor_thread.daemon = True
         monitor_thread.start()
+        
+        # Set an overall timeout in case the monitor thread itself gets stuck
+        overall_timeout = threading.Timer(
+            MODEL_TIMEOUT_SECONDS * 1.5,  # 150% of the model timeout
+            lambda: all_done.set() if not all_done.is_set() else None
+        )
+        overall_timeout.daemon = True
+        overall_timeout.start()
         
         # Yield events as they become available
         while not (all_done.is_set() and event_queue.empty()):
@@ -177,6 +212,10 @@ def stream_all_models(prompt, api_keys):
             except queue.Empty:
                 # No events right now, continue checking
                 pass
+                
+        # Clean up the overall timeout if it's still active
+        if overall_timeout.is_alive():
+            overall_timeout.cancel()
     
     return Response(stream_with_context(generate()), 
                    mimetype='text/event-stream',

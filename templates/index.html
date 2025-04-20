@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1c1c1c">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>EveryAI</title>
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
@@ -17,9 +20,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Mobile menu toggle button - keep this for small screens -->
+    <div class="menu-toggle" id="menu-toggle">
+        <i class="fas fa-bars"></i>
+    </div>
+    
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    
     <div class="app-container">
-        <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
+            <!-- Add collapse button for desktop -->
+            <div class="sidebar-collapse-btn" id="sidebar-collapse-btn">
+                <i class="fas fa-chevron-left"></i>
+            </div>
+            
+            <!-- Rest of sidebar content -->
             <div class="sidebar-header">
                 <div class="app-logo">
                     <img src="{{ url_for('static', filename='images/favicon.png') }}" alt="EveryAI Logo" class="logo-image">
@@ -41,12 +57,12 @@
             </div>
             
             <div class="sidebar-actions">
-                <button class="action-button" id="settings-btn">
+                <button class="action-button" id="settings-btn" data-tooltip="API Settings">
                     <i class="fas fa-cog"></i>
                     <span>API Settings</span>
                 </button>
                 
-                <button class="action-button clear-button" id="new-chat-btn">
+                <button class="action-button clear-button" id="new-chat-btn" data-tooltip="Clear Chat">
                     <i class="fas fa-trash-alt"></i>
                     <span>Clear Chat</span>
                 </button>
@@ -54,13 +70,16 @@
         </div>
 
         <!-- Main Content -->
-        <div class="main-content">
+        <div class="main-content" id="main-content">
             <div class="chat-container">
                 <div class="chat-messages" id="chat-messages">
                     <div class="welcome-container">
                         <h1>Welcome to EveryAI</h1>
                         <p>Compare responses from different AI models in real-time.</p>
                         <p class="subtitle">Enter your API keys, choose a model from the sidebar and start chatting!</p>
+                        <p class="subtitle">
+                            <a href="https://youtu.be/2Hm5EPra1YA" target="_blank" style="color:#6b4fff;">Click here</a> if you don't have your API keys
+                          </p>                          
                     </div>
                     <!-- Messages will appear here -->
                 </div>

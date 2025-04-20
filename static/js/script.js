@@ -124,6 +124,143 @@ document.addEventListener('DOMContentLoaded', () => {
     saveApiKeysBtn.addEventListener('click', saveApiKeys);
     clearChatBtn.addEventListener('click', clearChat);
 
+    // Add mobile menu functionality
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    
+    // Sidebar collapse functionality for desktop
+    const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
+    const mainContent = document.getElementById('main-content');
+    const appContainer = document.querySelector('.app-container');
+    
+    // Check if we have a stored preference for sidebar state
+    const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    
+    // Set initial state based on saved preference
+    if (sidebarCollapsed && window.innerWidth > 768) {
+        sidebar.classList.add('collapsed');
+    }
+    
+    // Toggle sidebar collapse state
+    if (sidebarCollapseBtn) {
+        sidebarCollapseBtn.addEventListener('click', () => {
+            // Only handle collapse for desktop view
+            if (window.innerWidth > 768) {
+                sidebar.classList.toggle('collapsed');
+                
+                // Store preference
+                localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                
+                // Force resize of textarea after sidebar animation completes
+                setTimeout(() => {
+                    if (promptInput) autoResizeTextarea(promptInput);
+                    window.dispatchEvent(new Event('resize'));
+                }, 300);
+            }
+        });
+    }
+    
+    // Handle mobile menu toggle
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+        });
+    }
+    
+    // Close sidebar when clicking outside
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
+    
+    // Close sidebar when selecting a model on mobile
+    if (modelSelect && window.innerWidth <= 768) {
+        modelSelect.addEventListener('change', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
+    
+    // Close sidebar when clicking action buttons on mobile
+    const sidebarButtons = document.querySelectorAll('.sidebar-actions button');
+    if (window.innerWidth <= 768) {
+        sidebarButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                setTimeout(() => {
+                    sidebar.classList.remove('active');
+                    sidebarOverlay.classList.remove('active');
+                }, 100);
+            });
+        });
+    }
+    
+    // Handle orientation changes
+    window.addEventListener('orientationchange', () => {
+        adjustForScreenSize();
+    });
+    
+    // Handle window resize
+    window.addEventListener('resize', debounce(() => {
+        adjustForScreenSize();
+    }, 250));
+    
+    // Function to adjust UI based on screen size
+    function adjustForScreenSize() {
+        if (window.innerWidth <= 768) {
+            // Mobile behavior
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            
+            // Reset collapse state on mobile
+            if (sidebar.classList.contains('collapsed')) {
+                sidebar.classList.remove('collapsed');
+            }
+        } else {
+            // Desktop behavior
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            
+            // Restore collapse state from localStorage
+            const shouldBeCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            if (shouldBeCollapsed && !sidebar.classList.contains('collapsed')) {
+                sidebar.classList.add('collapsed');
+            }
+        }
+        
+        // Recalculate textarea height
+        if (promptInput) autoResizeTextarea(promptInput);
+    }
+    
+    // Debounce function for resize events
+    function debounce(func, wait) {
+        let timeout;
+        return function() {
+            const context = this;
+            const args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                func.apply(context, args);
+            }, wait);
+        };
+    }
+    
+    // Also add touchstart listeners for better mobile experience
+    if (submitBtn) {
+        submitBtn.addEventListener('touchstart', () => {
+            submitBtn.classList.add('active');
+        });
+        submitBtn.addEventListener('touchend', () => {
+            submitBtn.classList.remove('active');
+        });
+    }
+    
+    // Initialize based on screen size
+    adjustForScreenSize();
+
     // Functions
     async function handleSubmit() {
         const prompt = promptInput.value.trim();
@@ -254,47 +391,68 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Update the createResponsePlaceholder function to include a timeout mechanism
     function createResponsePlaceholder(modelId, modelName) {
-        if (!activeModelResponses[modelId]) return;
-        
         const elementId = activeModelResponses[modelId].elementId;
         
-        // Create container
         const container = document.createElement('div');
         container.className = 'message-container assistant';
         container.id = elementId;
         
-        // Create message
         const message = document.createElement('div');
         message.className = 'message';
         
-        // Add model name
         const modelLabel = document.createElement('div');
         modelLabel.className = 'model-label';
         modelLabel.textContent = modelName;
-        message.appendChild(modelLabel);
         
-        // Add content area with typing indicator
-        const content = document.createElement('div');
-        content.className = 'message-content';
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
         
+        // Add typing indicator
         const typingIndicator = document.createElement('div');
         typingIndicator.className = 'typing-indicator';
         typingIndicator.innerHTML = '<span></span><span></span><span></span>';
-        content.appendChild(typingIndicator);
+        messageContent.appendChild(typingIndicator);
         
-        message.appendChild(content);
+        message.appendChild(modelLabel);
+        message.appendChild(messageContent);
         container.appendChild(message);
+        
         chatMessages.appendChild(container);
+        
+        // Add a timeout for this specific model
+        const timeoutSeconds = 30; // Match the backend timeout
+        activeModelResponses[modelId].timeout = setTimeout(() => {
+            // Check if this model response is still showing the typing indicator
+            const responseElement = document.getElementById(elementId);
+            if (responseElement && responseElement.querySelector('.typing-indicator')) {
+                // If we get here, it means the model hasn't completed yet
+                updateModelResponse(
+                    modelId, 
+                    "**Response taking too long.** The model may be overloaded or experiencing issues.", 
+                    false, 
+                    true
+                );
+            }
+        }, timeoutSeconds * 1000); // Convert to milliseconds
     }
     
+    // Update the updateModelResponse function to clear the timeout
     function updateModelResponse(modelId, content, completed = false, isError = false) {
         if (!activeModelResponses[modelId]) return;
         
         const elementId = activeModelResponses[modelId].elementId;
         const container = document.getElementById(elementId);
         
+        // Clear the timeout since we got a response
+        if (activeModelResponses[modelId].timeout) {
+            clearTimeout(activeModelResponses[modelId].timeout);
+            activeModelResponses[modelId].timeout = null;
+        }
+        
         if (container) {
+            const message = container.querySelector('.message');
             const messageContent = container.querySelector('.message-content');
             
             // Remove typing indicator
@@ -314,12 +472,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add styling for errors
             if (isError) {
                 container.classList.add('error');
+                message.classList.add('error-message');
             }
             
             // Add completion class
             if (completed) {
                 container.classList.add('completed');
             }
+            
+            // Apply dynamic sizing based on content length
+            if (content.length < 10) {
+                message.classList.add('short-message');
+            } else {
+                message.classList.remove('short-message');
+            }
+            
+            adjustMessageSize(message);
         }
     }
 
