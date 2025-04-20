@@ -11,19 +11,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const githubTokenInput = document.getElementById('github-token');
     const nvidiaKeyInput = document.getElementById('nvidia-key');
     const clearChatBtn = document.getElementById('new-chat-btn');
-
+    const abortButton = document.getElementById('abort-button');
     let currentConversationId = null;
     let eventSource = null;
     let activeModelResponses = {};
+    let operationInProgress = false;
 
-    // Configure markdown rendering with syntax highlighting
+    // Add to your initialization code section
+    abortButton.classList.remove('active'); // Ensure it's hidden initially
+    operationInProgress = false;
+
+    // Update the marked configuration section in your DOMContentLoaded event handler
     marked.setOptions({
         highlight: function(code, lang) {
             return hljs.highlightAuto(code).value;
         },
         breaks: true,
-        gfm: true
+        gfm: true,
+        pedantic: false,
+        sanitize: false, // Allow HTML for full compatibility
+        smartypants: true
     });
+
+    // Add custom renderer to handle math expressions
+    const renderer = new marked.Renderer();
+
+    // Store the original code renderer
+    const originalCodeRenderer = renderer.code;
+
+    // Override the code renderer to handle LaTeX blocks
+    renderer.code = function(code, language) {
+        // Check if this is a math block (indicated by 'math' or 'latex' language)
+        if (language === 'math' || language === 'latex') {
+            return `<div class="math-block">\\[${code}\\]</div>`;
+        }
+        
+        // Otherwise use the original renderer
+        return originalCodeRenderer.call(this, code, language);
+    };
+
+    // Add special handling for inline math
+    const originalInlineCode = renderer.codespan;
+    renderer.codespan = function(code) {
+        // Check if this looks like an inline math expression
+        if (code.startsWith('$') && code.endsWith('$')) {
+            return `<span class="math-inline">\\(${code.slice(1, -1)}\\)</span>`;
+        }
+        return originalInlineCode.call(this, code);
+    };
+
+    // Update marked with our custom renderer
+    marked.use({ renderer });
 
     // Initialize app 
     loadingIndicator.classList.add('hidden');
@@ -115,13 +153,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    submitBtn.addEventListener('click', () => {
+        // Add the sending animation class
+        submitBtn.classList.add('sending');
+        
+        // Remove the animation class after animation completes
+        setTimeout(() => {
+            submitBtn.classList.remove('sending');
+        }, 700);
+        
+        // Call the submit handler
+        handleSubmit();
+    });
+
     settingsBtn.addEventListener('click', () => {
+        // Add active spin class while modal is open
+        settingsBtn.classList.add('active-spin');
+        
         settingsModal.style.display = 'block';
         loadApiKeys();
     });
 
     closeModalBtn.addEventListener('click', () => {
         settingsModal.style.display = 'none';
+        settingsBtn.classList.remove('active-spin');
     });
 
     window.addEventListener('click', (e) => {
@@ -131,7 +186,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     saveApiKeysBtn.addEventListener('click', saveApiKeys);
-    clearChatBtn.addEventListener('click', clearChat);
+    clearChatBtn.addEventListener('click', () => {
+        clearChatBtn.classList.add('clearing');
+        
+        // Remove class after animation completes
+        setTimeout(() => {
+            clearChatBtn.classList.remove('clearing');
+        }, 800); // Match animation duration
+        
+        clearChat();
+    });
 
     // Add mobile menu functionality
     const menuToggle = document.getElementById('menu-toggle');
@@ -270,6 +334,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize based on screen size
     adjustForScreenSize();
 
+    // Initialize API key status
+    checkApiKeys();
+
+    // Add this function to process MathJax after rendering content
+    function processMathJax(element) {
+        if (window.MathJax) {
+            // Tell MathJax to process the element
+            MathJax.typesetPromise([element]).catch((err) => {
+                console.error('MathJax error:', err);
+            });
+        }
+    }
+
+    // Add this function to your script.js file
+    function processMathInContent(content) {
+        // Replace square brackets with display math delimiters
+        let processedContent = content.replace(/\[\s*(.+?)\s*\]/gs, function(match, p1) {
+            // If it already contains \begin{align} or similar, don't add extra delimiters
+            if (p1.includes('\\begin') || p1.includes('\\boxed')) {
+                return '$$' + p1 + '$$';
+            }
+            // For simple expressions, add proper LaTeX formatting
+            return '$$' + p1 + '$$';
+        });
+        
+        // Replace parentheses around variables with LaTeX
+        processedContent = processedContent.replace(/\(\s*([a-zA-Z0-9+\-*/=]+)\s*\)/g, '$\\($1\\)$');
+        
+        return processedContent;
+    }
+
     // Functions
     async function handleSubmit() {
         const prompt = promptInput.value.trim();
@@ -278,8 +373,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Disable submit button while processing
         submitBtn.disabled = true;
         
+        // Set operation status
+        operationInProgress = true;
+        
+        // Show abort button
+        abortButton.classList.add('active');
+        
         // Add animation class to the button
         submitBtn.classList.add('sending');
+        
+        // Switch to fast spin when sending requests
+        settingsBtn.classList.remove('slow-spin');
+        settingsBtn.classList.add('fast-spin');
         
         // Add user message to chat
         addMessageToChat('user', prompt);
@@ -362,7 +467,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         eventSource.close();
                         eventSource = null;
                         loadingIndicator.classList.add('hidden');
+                        
+                        // Return to slow spin if keys are valid
+                        settingsBtn.classList.remove('fast-spin');
+                        checkApiKeys(); // This will add slow-spin if keys are valid
+                        
                         submitBtn.disabled = false;
+                        
+                        // Hide abort button
+                        abortButton.classList.remove('active');
+                        
+                        // Reset operation status
+                        operationInProgress = false;
                     }
                 });
                 
@@ -380,6 +496,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             updateModelResponse(modelId, '**Error:** Connection lost', false, true);
                         }
                     }
+                    
+                    // Return to slow spin if keys are valid
+                    settingsBtn.classList.remove('fast-spin');
+                    checkApiKeys(); // This will add slow-spin if keys are valid
+                    
+                    // Hide abort button
+                    abortButton.classList.remove('active');
+                    
+                    // Reset operation status
+                    operationInProgress = false;
                 });
             } else {
                 // Single model request
@@ -399,17 +525,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (response.ok) {
                     addMessageToChat('assistant', data.response, data.model);
+                    
+                    // Hide abort button
+                    abortButton.classList.remove('active');
+                    
+                    // Reset operation status
+                    operationInProgress = false;
                 } else {
                     throw new Error(data.error || 'Failed to generate response');
                 }
                 
                 loadingIndicator.classList.add('hidden');
+                
+                // Return to slow spin if keys are valid
+                settingsBtn.classList.remove('fast-spin');
+                checkApiKeys(); // This will add slow-spin if keys are valid
+                
                 submitBtn.disabled = false;
             }
         } catch (error) {
             console.error('Error:', error);
             addMessageToChat('assistant', `**Error:** ${error.message}`, 'System');
             submitBtn.disabled = false;
+            
+            // Hide abort button
+            abortButton.classList.remove('active');
+            
+            // Reset operation status
+            operationInProgress = false;
+            
+            // Return to slow spin if keys are valid
+            settingsBtn.classList.remove('fast-spin');
+            checkApiKeys(); // This will add slow-spin if keys are valid
         }
     }
 
@@ -460,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, timeoutSeconds * 1000); // Convert to milliseconds
     }
     
-    // Update the updateModelResponse function to clear the timeout
+    // Update the updateModelResponse function
     function updateModelResponse(modelId, content, completed = false, isError = false) {
         if (!activeModelResponses[modelId]) return;
         
@@ -483,28 +630,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 typingIndicator.remove();
             }
             
-            // Check if this is a successful completion after a timeout error
-            const isRecovery = completed && container.classList.contains('error');
+            // Process content to convert LaTeX properly
+            const processedContent = processMathInContent(content);
             
-            // If this is a successful response after an error, remove error styling
-            if (isRecovery) {
-                container.classList.remove('error');
-                message.classList.remove('error-message');
+            // Check if content contains error indicators
+            const hasErrorContent = processedContent.toLowerCase().includes('error:') || 
+                                   processedContent.toLowerCase().includes('api key not provided') ||
+                                   processedContent.toLowerCase().includes('timed out');
+            
+            // Apply error styling for any error message
+            if (isError || hasErrorContent) {
+                container.classList.add('error');
+                message.classList.add('error-message');
             }
             
             // Add content with markdown
-            messageContent.innerHTML = marked.parse(content);
+            messageContent.innerHTML = marked.parse(processedContent);
             
             // Apply syntax highlighting
             messageContent.querySelectorAll('pre code').forEach((block) => {
                 hljs.highlightElement(block);
             });
             
-            // Only apply error styling if this is a new error, not a recovery
-            if (isError && !completed) {
-                container.classList.add('error');
-                message.classList.add('error-message');
-                activeModelResponses[modelId].hasTimedOut = true;
+            // Trigger MathJax to process the newly added content
+            if (window.MathJax) {
+                window.MathJax.typesetPromise([messageContent]).catch(err => {
+                    console.error('MathJax error:', err);
+                });
             }
             
             // Add completion class
@@ -523,7 +675,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Also update the addMessageToChat function
     function addMessageToChat(role, content, modelName = null) {
+        // Process LaTeX in the content if it's from an assistant
+        const processedContent = role === 'assistant' ? processMathInContent(content) : content;
+        
         const container = document.createElement('div');
         container.className = `message-container ${role}`;
         
@@ -541,13 +697,20 @@ document.addEventListener('DOMContentLoaded', () => {
         messageContent.className = 'message-content';
         
         if (role === 'assistant') {
-            messageContent.innerHTML = marked.parse(content);
+            messageContent.innerHTML = marked.parse(processedContent);
             
             messageContent.querySelectorAll('pre code').forEach((block) => {
                 hljs.highlightElement(block);
             });
+            
+            // Trigger MathJax processing
+            if (window.MathJax) {
+                window.MathJax.typesetPromise([messageContent]).catch(err => {
+                    console.error('MathJax error:', err);
+                });
+            }
         } else {
-            messageContent.textContent = content;
+            messageContent.textContent = processedContent;
         }
         
         message.appendChild(messageContent);
@@ -569,6 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Update the saveApiKeys function to properly show red indicators for missing keys
     async function saveApiKeys() {
         try {
             const response = await fetch('/save_api_keys', {
@@ -583,29 +747,87 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (response.ok) {
+                // Close the modal
                 settingsModal.style.display = 'none';
+                settingsBtn.classList.remove('active-spin');
                 
-                // Show success notification
-                const notification = document.createElement('div');
-                notification.className = 'loading-indicator';
-                notification.style.backgroundColor = 'var(--success-color)';
-                notification.innerHTML = '<i class="fas fa-check"></i> <span>API keys saved</span>';
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
+                // Check if BOTH API keys are provided
+                if (githubTokenInput.value && githubTokenInput.value.trim() !== '' &&
+                    nvidiaKeyInput.value && nvidiaKeyInput.value.trim() !== '') {
+                    // Both keys provided - show green indicator
+                    settingsBtn.classList.add('api-valid');
+                    settingsBtn.classList.remove('api-invalid');
+                    settingsBtn.classList.add('slow-spin'); // Start slow spin for valid keys
+                } else {
+                    // Missing at least one key after save - show red indicator
+                    settingsBtn.classList.remove('api-valid');
+                    settingsBtn.classList.add('api-invalid'); // Show red indicator
+                    settingsBtn.classList.remove('slow-spin');
+                    
+                    // Keep the red indicator visible for 5 seconds
+                    setTimeout(() => {
+                        if (!document.getElementById('settings-modal').style.display === 'block') {
+                            settingsBtn.classList.remove('api-invalid');
+                        }
+                    }, 5000);
+                }
             } else {
+                settingsBtn.classList.add('api-invalid');
+                settingsBtn.classList.remove('api-valid');
+                setTimeout(() => {
+                    settingsBtn.classList.remove('api-invalid');
+                }, 5000);
                 alert('Failed to save API keys');
             }
         } catch (error) {
             console.error('Error saving API keys:', error);
+            settingsBtn.classList.add('api-invalid');
+            settingsBtn.classList.remove('api-valid');
+            setTimeout(() => {
+                settingsBtn.classList.remove('api-invalid');
+            }, 5000);
             alert('Error saving API keys: ' + error.message);
         }
     }
 
+    // Also update the checkApiKeys function for consistency
+    async function checkApiKeys() {
+        try {
+            const response = await fetch('/get_api_keys');
+            const data = await response.json();
+            
+            // Check if both keys are provided and non-empty
+            const githubKeyValid = data.github_token && data.github_token.trim() !== '';
+            const nvidiaKeyValid = data.nvidia_key && data.nvidia_key.trim() !== '';
+            
+            if (githubKeyValid && nvidiaKeyValid) {
+                // Both keys valid - green indicator
+                settingsBtn.classList.add('api-valid');
+                settingsBtn.classList.remove('api-invalid');
+                settingsBtn.classList.add('slow-spin');
+            } else if (githubKeyValid || nvidiaKeyValid) {
+                // Some keys present but incomplete - red indicator
+                settingsBtn.classList.remove('api-valid');
+                settingsBtn.classList.add('api-invalid');
+                settingsBtn.classList.remove('slow-spin');
+            } else {
+                // No keys - no indicator
+                settingsBtn.classList.remove('api-valid');
+                settingsBtn.classList.remove('api-invalid');
+                settingsBtn.classList.remove('slow-spin');
+            }
+        } catch (error) {
+            console.error('Failed to check API keys:', error);
+            // Remove indicators on error
+            settingsBtn.classList.remove('api-valid');
+            settingsBtn.classList.remove('api-invalid');
+            settingsBtn.classList.remove('slow-spin');
+        }
+    }
+
+    // Update the clearChat function in script.js
     function clearChat() {
-        // Close EventSource if open
+        // Cancel any in-progress requests
         if (eventSource) {
             eventSource.close();
             eventSource = null;
@@ -614,26 +836,190 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset tracking
         activeModelResponses = {};
         
+        // Abort any pending fetch requests if there are any
+        // Re-enable the submit button to ensure UI is consistent
+        submitBtn.disabled = false;
+        
+        // Remove any gear animation
+        settingsBtn.classList.remove('fast-spin');
+        checkApiKeys(); // This will restore slow-spin if keys are valid
+        
         // Clear messages
         chatMessages.innerHTML = '';
         
-        // Add welcome message
+        // Recreate the welcome message with EXACT same content as initial load
         const welcomeContainer = document.createElement('div');
         welcomeContainer.className = 'welcome-container';
-        welcomeContainer.innerHTML = `
-            <h1>Welcome to EveryAI!</h1>
-            <p>Compare responses from different AI models in real-time.</p>
-            <p class="subtitle">Choose a model from the sidebar and start chatting!</p>
-        `;
+        
+        const welcomeHeading = document.createElement('h1');
+        welcomeHeading.textContent = 'Welcome to EveryAI'; // Added the exclamation mark to match original
+        
+        const welcomeText = document.createElement('p');
+        welcomeText.textContent = 'Compare responses from different AI models in real-time.';
+        
+        const subtitleText = document.createElement('p');
+        subtitleText.className = 'subtitle';
+        subtitleText.textContent = 'Enter your API keys, choose a model from the sidebar and start chatting!';
+        
+        const keysLinkContainer = document.createElement('p');
+        keysLinkContainer.className = 'subtitle';
+        
+        const keysLink = document.createElement('a');
+        keysLink.href = 'https://youtu.be/2Hm5EPra1YA';
+        keysLink.target = '_blank';
+        keysLink.style.color = '#6b4fff';
+        keysLink.textContent = 'Click here';
+        
+        keysLinkContainer.appendChild(keysLink);
+        keysLinkContainer.appendChild(document.createTextNode(' if you don\'t have your API keys'));
+        
+        const githubContainer = document.createElement('p');
+        githubContainer.className = 'subtitle';
+        githubContainer.style.color = 'inherit';
+        githubContainer.textContent = 'Interested in contributing? Check out the project on ';
+        
+        const githubLink = document.createElement('a');
+        githubLink.href = 'https://github.com/itstanayhere/EveryAI'; // Note: capital E and A to match HTML
+        githubLink.target = '_blank'; // Added target blank to match HTML
+        githubLink.style.color = '#6b4fff';
+        githubLink.textContent = 'GitHub';
+        
+        githubContainer.appendChild(githubLink);
+        
+        welcomeContainer.appendChild(welcomeHeading);
+        welcomeContainer.appendChild(welcomeText);
+        welcomeContainer.appendChild(subtitleText);
+        welcomeContainer.appendChild(keysLinkContainer);
+        welcomeContainer.appendChild(githubContainer);
+        
         chatMessages.appendChild(welcomeContainer);
         
-        // Reset state
-        submitBtn.disabled = false;
-        loadingIndicator.classList.add('hidden');
+        // Apply animation to the welcome heading
+        setTimeout(() => {
+            const welcomeHeading = document.querySelector('.welcome-container h1');
+            if (welcomeHeading) {
+                // Make sure the heading has the gradient animation applied
+                welcomeHeading.style.backgroundSize = '300% 100%'; 
+                welcomeHeading.style.webkitBackgroundClip = 'text';
+                welcomeHeading.style.backgroundClip = 'text';
+                welcomeHeading.style.color = 'transparent';
+                welcomeHeading.style.animation = 'gradientFlow 12s ease infinite';
+            }
+        }, 100);
+        
+        // Reset conversation ID to terminate any pending operations
         currentConversationId = 'conv_' + Date.now();
+        
+        // Hide abort button if visible
+        abortButton.classList.remove('active');
+        
+        // Reset operation status
+        operationInProgress = false;
+    }
+
+    // Helper function for animating the welcome heading if you have that feature
+    function animateWelcomeHeading() {
+        const welcomeHeading = document.querySelector('.welcome-container h1');
+        if (welcomeHeading) {
+            const text = welcomeHeading.textContent;
+            welcomeHeading.textContent = '';
+            
+            // Create individual spans for each character
+            for (let i = 0; i < text.length; i++) {
+                const span = document.createElement('span');
+                span.textContent = text[i];
+                span.style.setProperty('--char-index', i);
+                welcomeHeading.appendChild(span);
+            }
+        }
     }
 
     function scrollToBottom() {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+
+    // Add event listener for the abort button
+    abortButton.addEventListener('click', () => {
+        // Visual feedback
+        abortButton.classList.add('clicked');
+        setTimeout(() => {
+            abortButton.classList.remove('clicked');
+        }, 300);
+        
+        // Abort the operation
+        abortCurrentOperation();
+    });
+
+    // Replace your existing abortCurrentOperation function
+
+    // Function to abort the current operation
+    function abortCurrentOperation() {
+        // Only perform abort if an operation is in progress
+        if (!operationInProgress) return;
+        
+        // First notify the server to cancel the operations
+        fetch('/cancel_operations', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                conversation_id: currentConversationId
+            })
+        }).catch(error => {
+            console.error('Failed to notify server about cancellation:', error);
+        });
+        
+        // Close EventSource if exists
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        
+        // For all active model responses that are still processing,
+        // mark them as aborted
+        for (const [modelId, info] of Object.entries(activeModelResponses)) {
+            const elementId = info.elementId;
+            const container = document.getElementById(elementId);
+            
+            if (container && container.querySelector('.typing-indicator')) {
+                // Replace typing indicator with aborted message
+                updateModelResponse(
+                    modelId,
+                    "**Operation aborted by user.**",
+                    true,
+                    true
+                );
+            }
+        }
+        
+        // Reset tracking
+        activeModelResponses = {};
+        
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        
+        // Reset gear animation
+        settingsBtn.classList.remove('fast-spin');
+        checkApiKeys(); // Restore slow-spin if keys are valid
+        
+        // Hide abort button
+        abortButton.classList.remove('active');
+        
+        // Reset operation status
+        operationInProgress = false;
+        
+        // Create a new conversation ID for future requests
+        currentConversationId = 'conv_' + Date.now();
+    }
+
+    // Add a beforeunload handler to warn users if they try to leave during an operation
+    window.addEventListener('beforeunload', (event) => {
+        if (operationInProgress) {
+            // Standard way to show a warning when leaving the page
+            const message = 'Operation in progress. Are you sure you want to leave?';
+            event.returnValue = message;
+            return message;
+        }
+    });
 });

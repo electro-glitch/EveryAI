@@ -184,15 +184,35 @@ body {
     align-items: center;
 }
 
+/* Keep the logo-text animation faster for more subtle effect */
 .logo-text {
     font-family: var(--heading-font);
     font-size: 1.7rem;
     font-weight: 700;
-    background: linear-gradient(90deg, var(--primary-color), #9f7aea);
+    background: linear-gradient(90deg, 
+        var(--primary-color), 
+        #9f7aea, 
+        #6b4fff, 
+        #8364ff, 
+        #a27aff, 
+        #7652ff);
+    background-size: 400% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     letter-spacing: -0.5px;
+    animation: gradientFlow 8s ease infinite;
+    text-shadow: 0 0 15px rgba(107, 79, 255, 0.2);
+}
+
+/* Enhanced animated gradient for EveryAI text */
+.logo-text, .welcome-container h1 {
+    text-shadow: 0 0 15px rgba(107, 79, 255, 0.3);
+    transition: text-shadow 0.3s ease;
+}
+
+.logo-text:hover, .welcome-container h1:hover {
+    text-shadow: 0 0 20px rgba(107, 79, 255, 0.5);
 }
 
 /* Enhanced model selector */
@@ -374,22 +394,68 @@ body {
     scroll-behavior: smooth;
 }
 
+/* Improve contrast for better visibility */
 .welcome-container {
+    text-align: center;
     max-width: 800px;
     margin: 80px auto 0;
-    text-align: center;
-    padding: 20px;
+    padding: 0 20px;
+    background-color: rgba(18, 18, 18, 0.6); /* Slight dark backdrop */
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
+/* Slower gradient animation for the welcome heading */
 .welcome-container h1 {
     font-family: var(--heading-font);
     font-size: 2.6rem;
     margin-bottom: 16px;
-    background: linear-gradient(90deg, var(--primary-color), #9f7aea);
+    background: linear-gradient(90deg, 
+        var(--primary-color), 
+        #9f7aea, 
+        #6b4fff, 
+        #8364ff, 
+        #a27aff, 
+        #7652ff);
+    background-size: 300% 100%; /* Slightly smaller size for more noticeable movement */
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     letter-spacing: -0.5px;
+    animation: gradientFlow 12s ease infinite; /* Increased from 8s to 12s for slower movement */
+    text-shadow: 0 0 20px rgba(107, 79, 255, 0.3);
+    position: relative;
+    display: inline-block;
+}
+
+.welcome-container h1::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    bottom: -5px;
+    left: 0;
+    background: linear-gradient(90deg, 
+        transparent, 
+        var(--primary-color), 
+        #9f7aea, 
+        var(--primary-color), 
+        transparent);
+    animation: underlineFlow 12s ease infinite;
+    opacity: 0.5;
+}
+
+@keyframes underlineFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 .welcome-container p {
@@ -403,6 +469,25 @@ body {
 .welcome-container .subtitle {
     margin-top: 16px;
     font-size: 1rem;
+}
+
+/* Add the gradient animation keyframes */
+@keyframes gradientFlow {
+    0% {
+        background-position: 0% 50%;
+    }
+    20% { /* Added pause point */
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    70% { /* Added pause point */
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 /* Input Container */
@@ -615,23 +700,27 @@ body {
 }
 
 /* Add styling for error messages */
+.message-container.error .message,
+.message-container .message.error-message {
+    border-left: 3px solid var(--error-color);
+    background-color: rgba(239, 68, 68, 0.03);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Remove the warning icon */
+.message.error-message::before {
+    content: none;
+}
+
+/* Make the model label red for error messages */
 .message-container.error .model-label {
     color: var(--error-color);
+    opacity: 0.85;
 }
 
-.message.error-message {
-    border-color: var(--error-color);
-    background-color: rgba(239, 68, 68, 0.05);
-}
-
-/* Add a subtle warning icon to error messages */
-.message.error-message::before {
-    content: '⚠️';
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    font-size: 14px;
-    opacity: 0.7;
+/* Style the error message text to be less alarming */
+.message-container.error .message-content {
+    color: #e05d5d;
 }
 
 /* Enhance the fade-in animation to include a slight size adjustment */
@@ -687,9 +776,7 @@ body {
     padding: 16px;
     margin: 16px 0;
     overflow-x: auto;
-    max-width: 100%;
-    white-space: pre-wrap;       /* Since CSS 2.1 */
-    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    border: 1px solid var(--border-color);
 }
 
 .message-content pre code {
@@ -702,15 +789,70 @@ body {
 }
 
 .message-content code:not(pre code) {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
     padding: 2px 4px;
     border-radius: 4px;
+    font-family: 'Courier New', monospace;
 }
 
 /* Improve image scaling */
 .message-content img {
     max-width: 100%;
     height: auto;
+}
+
+/* Add this to your style.css file */
+.math-block {
+    display: block;
+    overflow-x: auto;
+    padding: 16px;
+    margin: 16px 0;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.math-inline {
+    padding: 0 4px;
+}
+
+/* Fix the bracket display in math expressions */
+.message-content .math-block .MathJax {
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+/* Add these styles to your style.css file */
+.MathJax {
+    overflow-x: auto;
+    max-width: 100%;
+    margin: 8px 0;
+}
+
+/* Improve spacing around math blocks */
+.message-content p + .MathJax {
+    margin-top: 10px;
+}
+
+.message-content .MathJax + p {
+    margin-top: 10px;
+}
+
+/* Style for inline math */
+.message-content mjx-container[jax="CHTML"][display="true"] {
+    margin: 16px 0;
+    overflow-x: auto;
+    max-width: 100%;
+    padding: 8px 0;
+}
+
+/* Add a subtle background to math blocks for better visibility */
+.message-content mjx-container[jax="CHTML"][display="true"] {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: var(--border-radius-md);
+    padding: 16px 8px;
+    border: 1px solid var(--border-color);
 }
 
 /* Modal */
@@ -858,6 +1000,74 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* Add animation keyframes for gear rotation */
+@keyframes slowSpin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fastSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* Add styles for settings button animations */
+#settings-btn i {
+    transition: transform 0.3s ease;
+}
+
+/* Settings button hover animation */
+#settings-btn:hover i {
+    transform: rotate(90deg);
+}
+
+/* Settings button active spin */
+#settings-btn.active-spin i {
+    animation: spin 3s linear infinite; /* Default speed */
+}
+
+/* Settings button fast spin when models are responding */
+#settings-btn.fast-spin i {
+    animation: fastSpin 1s linear infinite; /* Fast speed for when models are working */
+}
+
+/* Settings button slow spin when idle but API keys are valid */
+#settings-btn.slow-spin i {
+    animation: slowSpin 6s linear infinite; /* Slower speed for idle state */
+}
+
+/* Add status indicators to settings button */
+#settings-btn {
+    position: relative;
+}
+
+#settings-btn::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    opacity: 0;
+    transform: scale(0);
+}
+
+/* Valid API keys indicator */
+#settings-btn.api-valid::after {
+    background-color: var(--success-color);
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 5px var(--success-color);
+}
+
+/* Invalid API keys indicator */
+#settings-btn.api-invalid::after {
+    background-color: var(--error-color);
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 5px var(--error-color);
+}
+
 .hidden {
     display: none;
 }
@@ -931,6 +1141,128 @@ body {
     cursor: pointer;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     transition: all 0.2s ease;
+}
+
+/* Add subtle pulse effect on hover for extra interactivity */
+.logo-text:hover, .welcome-container h1:hover {
+    animation: gradientFlow 3s ease infinite;
+}
+
+/* Trash can hover animation */
+#new-chat-btn i {
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+#new-chat-btn:hover i {
+    transform: translateY(-4px) rotate(-10deg);
+}
+
+/* Trash can click animation */
+#new-chat-btn.clearing i {
+    animation: trashShake 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes trashShake {
+    0% { transform: translateY(0) rotate(0); }
+    20% { transform: translateY(-4px) rotate(-15deg); }
+    40% { transform: translateY(0) rotate(10deg); }
+    60% { transform: translateY(-2px) rotate(-5deg); }
+    80% { transform: translateY(0) rotate(2deg); }
+    100% { transform: translateY(0) rotate(0); }
+}
+
+/* Trash can lid animation - modify HTML to separate lid */
+#new-chat-btn .trash-lid {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    transform-origin: 50% 5%;
+}
+
+#new-chat-btn:hover .trash-lid {
+    transform: rotate(-25deg);
+}
+
+#new-chat-btn.clearing .trash-lid {
+    animation: lidOpen 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes lidOpen {
+    0% { transform: rotate(0); }
+    30% { transform: rotate(-40deg); }
+    60% { transform: rotate(-30deg); }
+    100% { transform: rotate(0); }
+}
+
+/* Abort button styling */
+.abort-button {
+    position: fixed;
+    bottom: 80px;
+    right: 24px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background-color: var(--error-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    opacity: 0;
+    transform: scale(0);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.2s ease;
+    z-index: 900;
+}
+
+/* Show the abort button when active */
+.abort-button.active {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Hover effect */
+.abort-button:hover {
+    transform: scale(1.1);
+    background-color: #ff3a3a;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+}
+
+/* Icon animation */
+.abort-button i {
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+}
+
+.abort-button:hover i {
+    transform: rotate(90deg);
+}
+
+/* Ripple effect for click feedback */
+.abort-button::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 0.5s, opacity 0.5s;
+    pointer-events: none;
+}
+
+.abort-button.clicked::after {
+    animation: ripple 0.6s ease-out;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+    .abort-button {
+        bottom: 70px;
+        right: 20px;
+    }
 }
 
 /* Responsiveness */

@@ -222,5 +222,20 @@ def stream_all_models(prompt, api_keys):
                    headers={'Cache-Control': 'no-cache',
                            'X-Accel-Buffering': 'no'})
 
+# Store active conversations and their cancellation status
+active_conversations = {}
+
+@app.route('/cancel_operations', methods=['POST'])
+def cancel_operations():
+    data = request.json
+    conversation_id = data.get('conversation_id')
+    
+    if conversation_id:
+        # Mark this conversation as cancelled
+        active_conversations[conversation_id] = 'cancelled'
+        return jsonify({'success': True, 'message': 'Operations cancelled'})
+    else:
+        return jsonify({'success': False, 'error': 'No conversation ID provided'}), 400
+
 if __name__ == '__main__':
     app.run(debug=True)
