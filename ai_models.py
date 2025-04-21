@@ -5,13 +5,13 @@ from azure.core.credentials import AzureKeyCredential
 from mistralai import Mistral, UserMessage, SystemMessage
 
 # Factory functions to create model function with API keys
-def create_openAIo3mini(token):
-    def openAIo3mini(prompt):
+def create_openAIo3(token):
+    def openAIo3(prompt):
         if not token:
             return "API key not provided. Please enter your GitHub token in the settings."
             
-        endpoint = "https://models.inference.ai.azure.com"
-        model_name = "o3-mini"
+        endpoint = "https://models.github.ai/inference"
+        model_name = "openai/o3"
 
         client = OpenAI(
             base_url=endpoint,
@@ -32,15 +32,15 @@ def create_openAIo3mini(token):
             model=model_name
         )    
         return response.choices[0].message.content
-    return openAIo3mini
+    return openAIo3
 
-def create_openAIo1preview(token):
-    def openAIo1preview(prompt):
+def create_openAIo4preview(token):
+    def openAIo4preview(prompt):
         if not token:
             return "API key not provided. Please enter your GitHub token in the settings."
             
-        endpoint = "https://models.inference.ai.azure.com"
-        model_name = "o1-preview"
+        endpoint = "https://models.github.ai/inference"
+        model_name = "openai/o4-mini"
 
         client = OpenAI(
             base_url=endpoint,
@@ -50,6 +50,10 @@ def create_openAIo1preview(token):
         response = client.chat.completions.create(
             messages=[
                 {
+                    "role": "developer",
+                    "content": "You are a helpful assistant.",
+                },
+                {
                     "role": "user",
                     "content": prompt,
                 }
@@ -58,15 +62,15 @@ def create_openAIo1preview(token):
         )
 
         return response.choices[0].message.content
-    return openAIo1preview
+    return openAIo4preview
 
-def create_chatgpt4o(token):
-    def chatgpt4o(prompt):
+def create_chatgpt41(token):
+    def chatgpt41(prompt):
         if not token:
             return "API key not provided. Please enter your GitHub token in the settings."
             
-        endpoint = "https://models.inference.ai.azure.com"
-        model_name = "gpt-4o"
+        endpoint = "https://models.github.ai/inference"
+        model_name = "openai/gpt-4.1"
 
         client = OpenAI(
             base_url=endpoint,
@@ -84,14 +88,14 @@ def create_chatgpt4o(token):
                     "content": prompt,
                 }
             ],
-            temperature=0.7,
-            top_p=0.8,
+            temperature=1.0,
+            top_p=1.0,
             max_tokens=1024,
             model=model_name
         )
 
         return response.choices[0].message.content
-    return chatgpt4o
+    return chatgpt41
 
 def create_phi4(token):
     def phi4(prompt):
@@ -119,28 +123,32 @@ def create_phi4(token):
         return response.choices[0].message.content
     return phi4
 
-def create_deepseekv3(token):
-    def deepseekv3(prompt):
+def create_deepseekv30324(token):
+    def deepseekv30324(prompt):
         if not token:
             return "API key not provided. Please enter your GitHub token in the settings."
             
-        endpoint = "https://models.inference.ai.azure.com"
-        model_name = "DeepSeek-V3"
+        endpoint = "https://models.github.ai/inference"
+        model_name = "deepseek/DeepSeek-V3-0324"
+        
         client = ChatCompletionsClient(
-        endpoint=endpoint,
-        credential=AzureKeyCredential(token),
+            endpoint=endpoint,
+            credential=AzureKeyCredential(token),
         )
 
         response = client.complete(
             messages=[
-                {"role": "user", "content": prompt}
+                AzureSystemMessage("You are a helpful assistant."),
+                AzureUserMessage(prompt)
             ],
-            max_tokens=1024,
+            temperature=1.0,
+            top_p=1.0,
+            max_tokens=1000,
             model=model_name
         )
 
         return response.choices[0].message.content
-    return deepseekv3
+    return deepseekv30324
 
 def create_metallama(token):
     def metallama(prompt):

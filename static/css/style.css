@@ -636,8 +636,9 @@ body {
     margin-bottom: 24px;
     animation: fadeIn 0.3s ease;
     position: relative;
-    /* Remove the fixed max-width and make it more content-aware */
     max-width: 85%;
+    width: fit-content; /* Use fit-content to adjust to actual content */
+    transition: max-height 0.3s ease, opacity 0.3s ease;
 }
 
 /* User message specific styling - more compact for short messages */
@@ -844,7 +845,30 @@ body {
     margin: 16px 0;
     overflow-x: auto;
     max-width: 100%;
-    padding: 8px 0;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease; /* Add smooth transition */
+}
+
+/* Ensure math expressions have proper spacing */
+.message-content mjx-container {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+/* Improve inline math spacing */
+.message-content .MathJax {
+    margin: 0 3px;
+}
+
+/* Ensure large equations can be scrolled horizontally */
+.message-content .MathJax_Display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+    padding-bottom: 10px; /* Add padding for scrollbar */
 }
 
 /* Add a subtle background to math blocks for better visibility */
@@ -853,6 +877,83 @@ body {
     border-radius: var(--border-radius-md);
     padding: 16px 8px;
     border: 1px solid var(--border-color);
+}
+
+/* Add these styles for better math expression readability */
+.contains-math .message {
+    background-color: rgba(40, 40, 40, 0.8); /* Slightly darker background for math content */
+    box-shadow: 0 3px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Add subtle highlighting to improve visibility of complex math */
+mjx-container[jax="CHTML"][display="true"]:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 15px rgba(107, 79, 255, 0.1);
+}
+
+/* Make all formula text have consistent sizing */
+mjx-container[jax="CHTML"] {
+    font-size: 110% !important;
+}
+
+/* Let long formulas scroll horizontally instead of wrapping */
+.message-content mjx-container[jax="CHTML"][display="true"] {
+    overflow-x: auto;
+    padding: 16px 8px;
+    max-width: calc(100% - 16px);
+    margin: 10px auto;
+}
+
+/* Add fade indicators for scrollable math */
+.message-content mjx-container[jax="CHTML"][display="true"]::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 30px;
+    background: linear-gradient(to right, transparent, var(--card-bg));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.message-content mjx-container[jax="CHTML"][display="true"].scrollable::after {
+    opacity: 1;
+}
+
+/* Add these styles to your style.css file */
+
+/* Fix for integral signs and other large operators */
+.mjx-op-icon {
+    margin-top: 0 !important;
+}
+
+/* Fix spacing around fractions */
+mjx-frac {
+    padding: 0 0.1em;
+}
+
+/* Fix alignment of superscripts and subscripts */
+mjx-script {
+    padding-right: 0.05em;
+}
+
+/* Fix dollar sign rendering in math */
+mjx-c.mjx-c24::before {
+    display: none;
+}
+
+/* Better spacing for mathematical operators */
+mjx-texatom[space="2"] {
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+/* Fix specific integral display */
+mjx-texatom mjx-mo {
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
 }
 
 /* Modal */

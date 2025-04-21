@@ -348,21 +348,93 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Add this function to your script.js file
+    function cleanMathExpression(mathExpr) {
+        // Fix common LaTeX commands
+        let cleaned = mathExpr
+            // Fix backslash escaping issues
+            .replace(/\\\\([a-zA-Z]+)/g, '\\$1')
+            .replace(/\\\\([^a-zA-Z])/g, '\\$1')
+            
+            // Fix specific commands that often have issues
+            .replace(/\\log\s+([a-zA-Z])/g, '\\log $1')
+            .replace(/\\frac\{(\d+)\}\{(\d+)\}/g, '\\frac{$1}{$2}')
+            .replace(/\\frac(\d)(\d)/g, '\\frac{$1}{$2}')
+            
+            // Remove stray dollar signs
+            .replace(/\$(x|y|z|t|u|v|a|b|n)\$/g, '$1')
+            .replace(/\$\((.*?)\)\$/g, '($1)');
+            
+        return cleaned;
+    }
+
+    // Fix dollar sign appearing in rendered math
     function processMathInContent(content) {
-        // Replace square brackets with display math delimiters
-        let processedContent = content.replace(/\[\s*(.+?)\s*\]/gs, function(match, p1) {
-            // If it already contains \begin{align} or similar, don't add extra delimiters
-            if (p1.includes('\\begin') || p1.includes('\\boxed')) {
-                return '$$' + p1 + '$$';
+        // First fix concatenated words in formulas
+        content = content.replace(/([a-z])([A-Z])/g, '$1 $2');
+        
+        // Fix spacing in math equations - add spaces between text segments
+        content = content.replace(/([a-zA-Z]+)([0-9]+)/g, '$1 $2');
+        
+        // Remove dollar signs within math expressions that aren't part of LaTeX
+        // This regex helps clean up accidental dollar signs
+        content = content.replace(/\[\s*(.+?)\s*\]/gs, function(match, p1) {
+            // Remove any stray $ characters in math content
+            let cleaned = p1.replace(/\$(x)\$/g, '$1');
+            cleaned = cleaned.replace(/\$\(x\)\$/g, '(x)');
+            
+            // Don't process if it looks like a link or code reference
+            if (cleaned.includes('](') || cleaned.startsWith('http')) {
+                return match;
             }
-            // For simple expressions, add proper LaTeX formatting
-            return '$$' + p1 + '$$';
+            
+            // If it already contains LaTeX commands, preserve spacing
+            if (cleaned.includes('\\begin') || cleaned.includes('\\frac') || cleaned.includes('\\boxed')) {
+                return '$$' + cleaned + '$$';
+            }
+            
+            // For simple expressions, ensure proper spacing
+            return '$$' + cleaned + '$$';
         });
         
-        // Replace parentheses around variables with LaTeX
-        processedContent = processedContent.replace(/\(\s*([a-zA-Z0-9+\-*/=]+)\s*\)/g, '$\\($1\\)$');
+        // Fix LaTeX commands with double backslashes
+        content = content.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
+        
+        // Fix inline math with parentheses
+        content = content.replace(/\(\s*([a-zA-Z0-9+\-*/=]+)\s*\)/g, '$\\($1\\)$');
+
+        // Replace square brackets with display math delimiters more intelligently
+        let processedContent = content.replace(/\[\s*(.+?)\s*\]/gs, function(match, p1) {
+            return '$$' + cleanMathExpression(p1.trim()) + '$$';
+        });
+        
+        // Fix inline math expressions
+        processedContent = processedContent.replace(/\\\((.*?)\\\)/g, function(match, p1) {
+            return '\\(' + cleanMathExpression(p1) + '\\)';
+        });
         
         return processedContent;
+    }
+
+    // Add this function to automatically resize containers with math content
+    function adjustContainerForMath(container) {
+        // Check if container contains MathJax elements
+        const hasMath = container.querySelector('mjx-container');
+        
+        if (hasMath) {
+            // Allow container to expand for math content
+            container.style.maxWidth = '95%';
+            container.style.width = 'auto';
+            
+            // Add a class that allows expansion for math
+            container.classList.add('contains-math');
+            
+            // Make sure the message width adjusts to content
+            const message = container.querySelector('.message');
+            if (message) {
+                message.style.width = 'auto';
+                message.style.maxWidth = '100%';
+            }
+        }
     }
 
     // Functions
@@ -654,7 +726,31 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Trigger MathJax to process the newly added content
             if (window.MathJax) {
-                window.MathJax.typesetPromise([messageContent]).catch(err => {
+                window.MathJax.typesetPromise([messageContent]).then(() => {
+                    // After MathJax has processed, adjust the container
+                    adjustContainerForMath(container);
+                    
+                    // Fix specific rendering issues
+                    const mathElements = messageContent.querySelectorAll('mjx-container');
+                    mathElements.forEach(mathEl => {
+                        // Fix integral signs
+                        const integrals = mathEl.querySelectorAll('mjx-mo[data-c="222B"]');
+                        integrals.forEach(integral => {
+                            integral.style.marginRight = '0.15em';
+                        });
+                        
+                        // Fix log display
+                        const logs = mathEl.querySelectorAll('mjx-mi:contains("log")');
+                        logs.forEach(log => {
+                            log.style.marginRight = '0.1em';
+                        });
+                        
+                        // Add custom class to math containers that need horizontal scrolling
+                        if (mathEl.scrollWidth > mathEl.clientWidth) {
+                            mathEl.classList.add('scrollable');
+                        }
+                    });
+                }).catch(err => {
                     console.error('MathJax error:', err);
                 });
             }

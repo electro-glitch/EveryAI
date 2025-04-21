@@ -19,19 +19,19 @@ MODEL_TIMEOUT_SECONDS = 60  # Timeout after 60 seconds
 # Dictionary mapping model IDs to functions (moved to a function to use API keys from session)
 def get_model_function(model_id, api_keys):
     from ai_models import (
-        create_openAIo3mini, create_openAIo1preview, create_chatgpt4o, create_phi4, 
-        create_deepseekv3, create_metallama, create_mistral, create_nvidia_nemotron
+        create_openAIo3, create_openAIo4preview, create_chatgpt41, create_phi4, 
+        create_deepseekv30324, create_metallama, create_mistral, create_nvidia_nemotron
     )
     
     github_token = api_keys.get('github_token', '')
     nvidia_key = api_keys.get('nvidia_key', '')
     
     MODEL_FUNCTIONS = {
-        'gpt4o': create_chatgpt4o(github_token),
-        'o3mini': create_openAIo3mini(github_token),
-        'o1preview': create_openAIo1preview(github_token),
+        'gpt41': create_chatgpt41(github_token),
+        'o3': create_openAIo3(github_token),
+        'o4preview': create_openAIo4preview(github_token),
         'phi4': create_phi4(github_token),
-        'deepseekv3': create_deepseekv3(github_token),
+        'deepseekv30324': create_deepseekv30324(github_token),
         'metallama': create_metallama(github_token),
         'mistral': create_mistral(github_token),
         'nemotron': create_nvidia_nemotron(nvidia_key)
@@ -40,11 +40,11 @@ def get_model_function(model_id, api_keys):
     return MODEL_FUNCTIONS.get(model_id)
 
 MODEL_NAMES = {
-    'gpt4o': 'GPT-4o',
-    'o3mini': 'O3-Mini',
-    'o1preview': 'O1-Preview',
+    'gpt41': 'GPT-4.1',
+    'o3': 'O3',
+    'o4preview': 'O4-Mini (Preview)',
     'phi4': 'Phi-4',
-    'deepseekv3': 'DeepSeek-V3',
+    'deepseekv30324': 'DeepSeek-V3-0324',
     'metallama': 'Meta Llama-3.2-90B',
     'mistral': 'Mistral-Large',
     'nemotron': 'Nvidia Nemotron-70B'

@@ -4,22 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- Add MathJax library -->
+    <!-- Update the MathJax configuration in index.html -->
     <script>
     MathJax = {
         tex: {
             inlineMath: [['$', '$'], ['\\(', '\\)']],
             displayMath: [['$$', '$$'], ['\\[', '\\]']],
             processEscapes: true,
-            processEnvironments: true
+            processEnvironments: true,
+            packages: {'[+]': ['ams', 'noerrors']},
+            macros: {
+                // Add common macros for better formula rendering
+                'with': '\\text{with}',
+                'use': '\\text{use}',
+                'full': '\\text{full}',
+                'life': '\\text{life}',
+                'of': '\\text{of}',
+                'years': '\\text{years}',
+                'and': '\\text{and}',
+                'expects': '\\text{expects}',
+                'no': '\\text{no}',
+                'residual': '\\text{residual}',
+                'value': '\\text{value}',
+                'the': '\\text{the}',
+                'annual': '\\text{annual}',
+                'depreciation': '\\text{depreciation}',
+                'expense': '\\text{expense}',
+                'under': '\\text{under}',
+                'straight': '\\text{straight}',
+                'line': '\\text{line}',
+                'method': '\\text{method}',
+                'would': '\\text{would}',
+                'be': '\\text{be}',
+                'per': '\\text{per}',
+                'year': '\\text{year}',
+                'This': '\\text{This}'
+            }
         },
         options: {
-            ignoreHtmlClass: 'tex2jax_ignore',
-            processHtmlClass: 'tex2jax_process'
+            skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+            enableMenu: false, // Disable the right-click menu for cleaner UX
+            renderActions: {
+                addMenu: [], // Remove the menu items to avoid clutter
+            },
+            menuOptions: {
+                settings: {
+                    zoom: "Click", // Enable click-to-zoom for complex equations
+                    zscale: "200%"
+                }
+            }
+        },
+        startup: {
+            typeset: false, // Don't typeset on startup, we'll do it manually
+            ready: function() {
+                MathJax.startup.defaultReady();
+                // Fix integral and large operator display
+                MathJax.startup.output.math.delimiters.display.renderActions.add('adjuster', function(node) {
+                    if (node.type === 'display') {
+                        const math = node.childNodes[node.childNodes.length - 1];
+                        if (math && math.nodeName === 'mjx-container') {
+                            math.style.margin = '0.75em 0';
+                        }
+                    }
+                });
+            }
         }
     };
     </script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
     
     <meta name="theme-color" content="#1c1c1c">
     <meta name="apple-mobile-web-app-capable" content="yes">
