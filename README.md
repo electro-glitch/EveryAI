@@ -1,6 +1,7 @@
 # 🔄 Update (20-04-2025)
 
-🌐 **Website link:** [EveryAI](https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/)  
+🌐 **Website link:** [EveryAI](https://everyai.me/)
+- _(Backup link: [Backup](https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/) )_
 
 ⚠️ _As a follow-up to my previous update, please note that while all models can run simultaneously, the free-tier Azure limits may cause some to time out after 60 seconds, even if they eventually generate a response._
 
@@ -9,7 +10,7 @@
 
 # 🔄 Update (15-04-2025)
 
-🌐 **Website link:** [EveryAI](https://everyai-f4e9fucdg2ddh8es.centralindia-01.azurewebsites.net/)  
+🌐 **Website link:** [EveryAI](https://everyai.me/)  
 
 ⚠️ _Since I'm on the **free tier** of Azure, I can't always guarantee you'll be able to run all the models at once, and the **response time** can be a bit slow._  
 ✨ **Want faster, smoother results? Reach out and show some love!**  
